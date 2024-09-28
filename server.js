@@ -129,9 +129,6 @@ app.get('/api/patientAppointments', authMiddleware, async (req, res) => {
     res.status(200).send(appointments);
 });
 
-// Iniciar el servidor
-app.listen(5000, () => console.log('Servidor corriendo en el puerto 5000'));
-
 // Endpoint para recomendar especialidad y devolver doctores con horarios disponibles
 app.post('/api/recommendation', authMiddleware, async (req, res) => {
     const { complaint } = req.body;
@@ -156,15 +153,22 @@ app.post('/api/recommendation', authMiddleware, async (req, res) => {
     const doctors = await Doctor.find({ specialty });
 
     if (!doctors.length) {
-        return res.status(404).send('No se encontraron doctores para esta especialidad');
+        return res.status(404).send({
+            specialty,
+            doctors: []
+        });
     }
 
     res.status(200).send({
         specialty,
         doctors: doctors.map(doctor => ({
             name: doctor.name,
-            availableDays: doctor.availableDays,
-            availableHours: doctor.availableHours
+            availableDays: doctor.availableDays || [],
+            availableHours: doctor.availableHours || []
         }))
     });
 });
+
+
+// Iniciar el servidor
+app.listen(5000, () => console.log('Servidor corriendo en el puerto 5000'));

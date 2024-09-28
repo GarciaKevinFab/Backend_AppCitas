@@ -90,13 +90,14 @@ const authMiddleware = (req, res, next) => {
     }
 
     try {
-        const verified = jwt.verify(token, process.env.JWT_SECRET);
+        const verified = jwt.verify(token.split(' ')[1], process.env.JWT_SECRET);
         req.user = verified;
         next();
     } catch (err) {
         res.status(400).send('Token inválido');
     }
 };
+
 
 // Obtener citas del doctor que ha iniciado sesión
 app.get('/api/doctorAppointments', authMiddleware, async (req, res) => {
@@ -135,7 +136,7 @@ app.listen(5000, () => console.log('Servidor corriendo en el puerto 5000'));
 app.post('/api/recommendation', authMiddleware, async (req, res) => {
     const { complaint } = req.body;
 
-    // Implementar una lógica básica para recomendar especialidades en base a palabras clave
+    // Implementar lógica básica para recomendar especialidades
     let specialty;
     if (complaint.includes('dolor de cabeza')) {
         specialty = 'Neurología';
@@ -158,7 +159,6 @@ app.post('/api/recommendation', authMiddleware, async (req, res) => {
         return res.status(404).send('No se encontraron doctores para esta especialidad');
     }
 
-    // Enviar la especialidad recomendada y los doctores con sus horarios disponibles
     res.status(200).send({
         specialty,
         doctors: doctors.map(doctor => ({
@@ -168,4 +168,3 @@ app.post('/api/recommendation', authMiddleware, async (req, res) => {
         }))
     });
 });
-

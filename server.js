@@ -143,6 +143,10 @@ app.post('/api/recommendation', authMiddleware, async (req, res) => {
         specialty = 'Gastroenterología';
     } else if (complaint.includes('fractura')) {
         specialty = 'Traumatología';
+    } else if (complaint.includes('piel')) {
+        specialty = 'Dermatología';
+    } else if (complaint.includes('corazón')) {
+        specialty = 'Cardiología';
     } else {
         specialty = 'Medicina General';
     }
@@ -150,7 +154,7 @@ app.post('/api/recommendation', authMiddleware, async (req, res) => {
     // Buscar doctores que pertenezcan a la especialidad recomendada
     const doctors = await Doctor.find({ specialty });
 
-    if (!doctors) {
+    if (!doctors.length) {
         return res.status(404).send('No se encontraron doctores para esta especialidad');
     }
 
@@ -164,3 +168,4 @@ app.post('/api/recommendation', authMiddleware, async (req, res) => {
         }))
     });
 });
+

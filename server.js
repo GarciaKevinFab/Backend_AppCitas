@@ -90,7 +90,7 @@ const authMiddleware = (req, res, next) => {
     }
 
     try {
-        const verified = jwt.verify(token.split(' ')[1], process.env.JWT_SECRET);
+        const verified = jwt.verify(token, process.env.JWT_SECRET);
         req.user = verified;
         next();
     } catch (err) {
@@ -98,45 +98,11 @@ const authMiddleware = (req, res, next) => {
     }
 };
 
-
-// Obtener citas del doctor que ha iniciado sesión
-app.get('/api/doctorAppointments', authMiddleware, async (req, res) => {
-    // Verificar que el usuario sea un doctor
-    if (req.user.role !== 'Doctor') {
-        return res.status(403).send('Acceso denegado. Solo los doctores pueden acceder a esta ruta.');
-    }
-
-    // Obtener el doctor por el userId del token
-    const doctor = await Doctor.findOne({ userId: req.user.userId });
-    if (!doctor) {
-        return res.status(404).send('Doctor no encontrado');
-    }
-
-    // Obtener citas del doctor
-    const appointments = await Appointment.find({ doctorName: doctor.name });
-    res.status(200).send(appointments);
-});
-
-// Obtener citas del paciente autenticado
-app.get('/api/patientAppointments', authMiddleware, async (req, res) => {
-    // Verificar que el usuario sea un paciente
-    if (req.user.role !== 'Paciente') {
-        return res.status(403).send('Acceso denegado. Solo los pacientes pueden acceder a esta ruta.');
-    }
-
-    // Obtener las citas del paciente autenticado
-    const appointments = await Appointment.find({ patientId: req.user.userId });
-    res.status(200).send(appointments);
-});
-
-// Iniciar el servidor
-app.listen(5000, () => console.log('Servidor corriendo en el puerto 5000'));
-
 // Endpoint para recomendar especialidad y devolver doctores con horarios disponibles
 app.post('/api/recommendation', authMiddleware, async (req, res) => {
     const { complaint } = req.body;
 
-    // Implementar lógica básica para recomendar especialidades
+    // Implementar una lógica básica para recomendar especialidades en base a palabras clave
     let specialty;
     if (complaint.includes('dolor de cabeza')) {
         specialty = 'Neurología';
@@ -159,6 +125,7 @@ app.post('/api/recommendation', authMiddleware, async (req, res) => {
         return res.status(404).send('No se encontraron doctores para esta especialidad');
     }
 
+    // Enviar la especialidad recomendada y los doctores con sus horarios disponibles
     res.status(200).send({
         specialty,
         doctors: doctors.map(doctor => ({
@@ -168,3 +135,6 @@ app.post('/api/recommendation', authMiddleware, async (req, res) => {
         }))
     });
 });
+
+// Iniciar el servidor
+app.listen(5000, () => console.log('Servidor corriendo en el puerto 5000'));

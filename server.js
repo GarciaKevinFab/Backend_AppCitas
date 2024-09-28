@@ -50,7 +50,6 @@ app.post('/api/register', async (req, res) => {
         await doctor.save();
     }
 
-    // Iniciar sesión automáticamente tras el registro
     const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.status(200).json({ token, userId: user._id, role: user.role });
 });
@@ -61,48 +60,33 @@ app.get('/api/specialties', async (req, res) => {
     res.status(200).send(specialties);
 });
 
-// Inicio de sesión (tanto para pacientes como doctores)
+// Inicio de sesión
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
 
-    // Buscar el usuario por correo electrónico
     const user = await User.findOne({ email });
     if (!user) {
         return res.status(400).send('Usuario no encontrado');
     }
 
-    // Verificar la contraseña
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
         return res.status(400).send('Contraseña incorrecta');
     }
 
-    // Crear y devolver un token JWT con el rol del usuario
     const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.status(200).json({ token, userId: user._id, role: user.role });
 });
 
-// Proteger rutas con JWT
-const authMiddleware = (req, res, next) => {
-    const token = req.headers['authorization'];
-    if (!token) {
-        return res.status(401).send('Acceso denegado');
-    }
+// Obtener citas del paciente autenticado
+app.get('/api/patientAppointments', async (req, res) => {
+    // Lógica para obtener las citas del paciente
+});
 
-    try {
-        const verified = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = verified;
-        next();
-    } catch (err) {
-        res.status(400).send('Token inválido');
-    }
-};
-
-// Endpoint para recomendar especialidad y devolver doctores con horarios disponibles
-app.post('/api/recommendation', authMiddleware, async (req, res) => {
+// Endpoint para recomendar especialidad
+app.post('/api/recommendation', async (req, res) => {
     const { complaint } = req.body;
 
-    // Implementar una lógica básica para recomendar especialidades en base a palabras clave
     let specialty;
     if (complaint.includes('dolor de cabeza')) {
         specialty = 'Neurología';
@@ -118,14 +102,11 @@ app.post('/api/recommendation', authMiddleware, async (req, res) => {
         specialty = 'Medicina General';
     }
 
-    // Buscar doctores que pertenezcan a la especialidad recomendada
     const doctors = await Doctor.find({ specialty });
-
     if (!doctors.length) {
         return res.status(404).send('No se encontraron doctores para esta especialidad');
     }
 
-    // Enviar la especialidad recomendada y los doctores con sus horarios disponibles
     res.status(200).send({
         specialty,
         doctors: doctors.map(doctor => ({

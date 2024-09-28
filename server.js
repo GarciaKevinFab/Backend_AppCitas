@@ -50,6 +50,7 @@ app.post('/api/register', async (req, res) => {
         await doctor.save();
     }
 
+    // Iniciar sesión automáticamente tras el registro
     const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.status(200).json({ token, userId: user._id, role: user.role });
 });
@@ -60,33 +61,82 @@ app.get('/api/specialties', async (req, res) => {
     res.status(200).send(specialties);
 });
 
-// Inicio de sesión
+// Inicio de sesión (tanto para pacientes como doctores)
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
 
+    // Buscar el usuario por correo electrónico
     const user = await User.findOne({ email });
     if (!user) {
         return res.status(400).send('Usuario no encontrado');
     }
 
+    // Verificar la contraseña
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
         return res.status(400).send('Contraseña incorrecta');
     }
 
+    // Crear y devolver un token JWT con el rol del usuario
     const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.status(200).json({ token, userId: user._id, role: user.role });
 });
 
-// Obtener citas del paciente autenticado
-app.get('/api/patientAppointments', async (req, res) => {
-    // Lógica para obtener las citas del paciente
+// Proteger rutas con JWT
+const authMiddleware = (req, res, next) => {
+    const token = req.headers['authorization'];
+    if (!token) {
+        return res.status(401).send('Acceso denegado');
+    }
+
+    try {
+        const verified = jwt.verify(token.split(' ')[1], process.env.JWT_SECRET);
+        req.user = verified;
+        next();
+    } catch (err) {
+        res.status(400).send('Token inválido');
+    }
+};
+
+
+// Obtener citas del doctor que ha iniciado sesión
+app.get('/api/doctorAppointments', authMiddleware, async (req, res) => {
+    // Verificar que el usuario sea un doctor
+    if (req.user.role !== 'Doctor') {
+        return res.status(403).send('Acceso denegado. Solo los doctores pueden acceder a esta ruta.');
+    }
+
+    // Obtener el doctor por el userId del token
+    const doctor = await Doctor.findOne({ userId: req.user.userId });
+    if (!doctor) {
+        return res.status(404).send('Doctor no encontrado');
+    }
+
+    // Obtener citas del doctor
+    const appointments = await Appointment.find({ doctorName: doctor.name });
+    res.status(200).send(appointments);
 });
 
-// Endpoint para recomendar especialidad
-app.post('/api/recommendation', async (req, res) => {
+// Obtener citas del paciente autenticado
+app.get('/api/patientAppointments', authMiddleware, async (req, res) => {
+    // Verificar que el usuario sea un paciente
+    if (req.user.role !== 'Paciente') {
+        return res.status(403).send('Acceso denegado. Solo los pacientes pueden acceder a esta ruta.');
+    }
+
+    // Obtener las citas del paciente autenticado
+    const appointments = await Appointment.find({ patientId: req.user.userId });
+    res.status(200).send(appointments);
+});
+
+// Iniciar el servidor
+app.listen(5000, () => console.log('Servidor corriendo en el puerto 5000'));
+
+// Endpoint para recomendar especialidad y devolver doctores con horarios disponibles
+app.post('/api/recommendation', authMiddleware, async (req, res) => {
     const { complaint } = req.body;
 
+    // Implementar lógica básica para recomendar especialidades
     let specialty;
     if (complaint.includes('dolor de cabeza')) {
         specialty = 'Neurología';
@@ -102,7 +152,9 @@ app.post('/api/recommendation', async (req, res) => {
         specialty = 'Medicina General';
     }
 
+    // Buscar doctores que pertenezcan a la especialidad recomendada
     const doctors = await Doctor.find({ specialty });
+
     if (!doctors.length) {
         return res.status(404).send('No se encontraron doctores para esta especialidad');
     }
@@ -116,6 +168,3 @@ app.post('/api/recommendation', async (req, res) => {
         }))
     });
 });
-
-// Iniciar el servidor
-app.listen(5000, () => console.log('Servidor corriendo en el puerto 5000'));

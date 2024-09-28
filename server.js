@@ -150,7 +150,7 @@ app.post('/api/recommendation', authMiddleware, async (req, res) => {
     }
 
     // Buscar doctores que pertenezcan a la especialidad recomendada
-    const doctors = await Doctor.find({ specialty });
+    const doctors = await Doctor.find({ specialty }).populate('userId', 'name'); // Popula el campo userId con el nombre del doctor
 
     if (!doctors.length) {
         return res.status(404).send({
@@ -162,12 +162,13 @@ app.post('/api/recommendation', authMiddleware, async (req, res) => {
     res.status(200).send({
         specialty,
         doctors: doctors.map(doctor => ({
-            name: doctor.name,
+            name: doctor.userId.name,  // Aquí obtenemos el nombre desde User
             availableDays: doctor.availableDays || [],
             availableHours: doctor.availableHours || []
         }))
     });
 });
+
 
 
 // Iniciar el servidor

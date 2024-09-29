@@ -82,7 +82,6 @@ app.post('/api/login', async (req, res) => {
     res.status(200).json({ token, userId: user._id, role: user.role });
 });
 
-
 // Proteger rutas con JWT
 const authMiddleware = (req, res, next) => {
     const token = req.headers['authorization'];
@@ -99,35 +98,33 @@ const authMiddleware = (req, res, next) => {
     }
 };
 
-
 // Obtener citas del doctor que ha iniciado sesión
 app.get('/api/doctorAppointments', authMiddleware, async (req, res) => {
     if (req.user.role !== 'Doctor') {
         return res.status(403).send('Acceso denegado. Solo los doctores pueden acceder a esta ruta.');
     }
 
-    const doctor = await Doctor.findOne({ userId: req.user.userId });
+    const doctor = await Doctor.findOne({ userId: req.user.userId }).populate('userId');
     if (!doctor) {
         return res.status(404).send('Doctor no encontrado');
     }
 
+    // Aquí hacemos la consulta de citas por el userId del doctor en lugar del doctorName
     const appointments = await Appointment.find({ doctorName: doctor.userId.name });
-    if (appointments.length === 0) {
+
+    if (!appointments || appointments.length === 0) {
         return res.status(404).send('No se encontraron citas');
     }
 
     res.status(200).send(appointments);
 });
 
-
 // Obtener citas del paciente autenticado
 app.get('/api/patientAppointments', authMiddleware, async (req, res) => {
-    // Verificar que el usuario sea un paciente
     if (req.user.role !== 'Paciente') {
         return res.status(403).send('Acceso denegado. Solo los pacientes pueden acceder a esta ruta.');
     }
 
-    // Obtener las citas del paciente autenticado
     const appointments = await Appointment.find({ patientId: req.user.userId });
     res.status(200).send(appointments);
 });
@@ -136,22 +133,26 @@ app.get('/api/patientAppointments', authMiddleware, async (req, res) => {
 app.post('/api/appointments', authMiddleware, async (req, res) => {
     const { patientId, patientName, doctorName, date, time } = req.body;
 
-    // Verificar que todos los datos estén presentes
     if (!patientId || !patientName || !doctorName || !date || !time) {
         return res.status(400).send('Todos los campos son obligatorios');
     }
 
     try {
+        // Buscar el nombre completo del doctor desde la base de datos
+        const doctor = await Doctor.findOne({ userId: doctorName }).populate('userId');
+        if (!doctor) {
+            return res.status(404).send('Doctor no encontrado');
+        }
+
         // Crear la cita
         const appointment = new Appointment({
             patientId,
             patientName,
-            doctorName,
+            doctorName: doctor.userId.name, // Asegurarnos de almacenar correctamente el nombre del doctor
             date,
             time
         });
 
-        // Guardar la cita en la base de datos
         await appointment.save();
         res.status(201).send('Cita creada exitosamente');
     } catch (error) {
@@ -164,7 +165,6 @@ app.post('/api/appointments', authMiddleware, async (req, res) => {
 app.post('/api/recommendation', authMiddleware, async (req, res) => {
     const { complaint } = req.body;
 
-    // Implementar lógica básica para recomendar especialidades
     let specialty;
     if (complaint.includes('dolor de cabeza')) {
         specialty = 'Neurología';
@@ -180,27 +180,20 @@ app.post('/api/recommendation', authMiddleware, async (req, res) => {
         specialty = 'Medicina General';
     }
 
-    // Buscar doctores que pertenezcan a la especialidad recomendada
-    const doctors = await Doctor.find({ specialty }).populate('userId', 'name'); // Popula el campo userId con el nombre del doctor
-
+    const doctors = await Doctor.find({ specialty }).populate('userId', 'name');
     if (!doctors.length) {
-        return res.status(404).send({
-            specialty,
-            doctors: []
-        });
+        return res.status(404).send({ specialty, doctors: [] });
     }
 
     res.status(200).send({
         specialty,
         doctors: doctors.map(doctor => ({
-            name: doctor.userId.name,  // Aquí obtenemos el nombre desde User
+            name: doctor.userId.name,
             availableDays: doctor.availableDays || [],
             availableHours: doctor.availableHours || []
         }))
     });
 });
-
-
 
 // Iniciar el servidor
 app.listen(5000, () => console.log('Servidor corriendo en el puerto 5000'));

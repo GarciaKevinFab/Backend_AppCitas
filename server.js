@@ -129,6 +129,34 @@ app.get('/api/patientAppointments', authMiddleware, async (req, res) => {
     res.status(200).send(appointments);
 });
 
+// Crear una nueva cita médica
+app.post('/api/appointments', authMiddleware, async (req, res) => {
+    const { patientId, patientName, doctorName, date, time } = req.body;
+
+    // Verificar que todos los datos estén presentes
+    if (!patientId || !patientName || !doctorName || !date || !time) {
+        return res.status(400).send('Todos los campos son obligatorios');
+    }
+
+    try {
+        // Crear la cita
+        const appointment = new Appointment({
+            patientId,
+            patientName,
+            doctorName,
+            date,
+            time
+        });
+
+        // Guardar la cita en la base de datos
+        await appointment.save();
+        res.status(201).send('Cita creada exitosamente');
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error al crear la cita');
+    }
+});
+
 // Endpoint para recomendar especialidad y devolver doctores con horarios disponibles
 app.post('/api/recommendation', authMiddleware, async (req, res) => {
     const { complaint } = req.body;
@@ -137,13 +165,13 @@ app.post('/api/recommendation', authMiddleware, async (req, res) => {
     let specialty;
     if (complaint.includes('dolor de cabeza')) {
         specialty = 'Neurología';
-    } else if (complaint.includes('dolor de estómago')) {
+    } else if (complaint.includes('dolor de estomago')) {
         specialty = 'Gastroenterología';
     } else if (complaint.includes('fractura')) {
         specialty = 'Traumatología';
     } else if (complaint.includes('piel')) {
         specialty = 'Dermatología';
-    } else if (complaint.includes('corazón')) {
+    } else if (complaint.includes('corazon')) {
         specialty = 'Cardiología';
     } else {
         specialty = 'Medicina General';

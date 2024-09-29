@@ -15,9 +15,11 @@ mongoose.connect(process.env.MONGO_URI, {
 // Importar las rutas
 const authRoutes = require('./routes/authRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
+const specialtyRoutes = require('./routes/specialtyRoutes');
 
 // Usar las rutas
 app.use('/api', authRoutes);
 app.use('/api', appointmentRoutes);
+app.use('/api', specialtyRoutes);
 
 app.listen(5000, () => console.log('Servidor corriendo en el puerto 5000'));

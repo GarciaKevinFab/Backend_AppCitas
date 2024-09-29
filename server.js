@@ -1,7 +1,14 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-require('dotenv').config();  // Cargar las variables de entorno
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import dotenv from 'dotenv'; // Cargar las variables de entorno
+
+// Cargar las rutas
+import authRoutes from './routes/authRoutes.js';
+import appointmentRoutes from './routes/appointmentRoutes.js';
+import specialtyRoutes from './routes/specialtyRoutes.js';
+
+dotenv.config();  // Cargar las variables de entorno
 
 const app = express();
 app.use(cors());
@@ -11,11 +18,6 @@ mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
 });
-
-// Importar las rutas
-const authRoutes = require('./routes/authRoutes');
-const appointmentRoutes = require('./routes/appointmentRoutes');
-const specialtyRoutes = require('./routes/specialtyRoutes');
 
 // Usar las rutas
 app.use('/api', authRoutes);

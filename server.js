@@ -77,10 +77,11 @@ app.post('/api/login', async (req, res) => {
         return res.status(400).send('Contraseña incorrecta');
     }
 
-    // Crear y devolver un token JWT con el rol del usuario
+    // Crear y devolver un token JWT con el rol y userId del usuario
     const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.status(200).json({ token, userId: user._id, role: user.role });
 });
+
 
 // Proteger rutas con JWT
 const authMiddleware = (req, res, next) => {
@@ -101,21 +102,23 @@ const authMiddleware = (req, res, next) => {
 
 // Obtener citas del doctor que ha iniciado sesión
 app.get('/api/doctorAppointments', authMiddleware, async (req, res) => {
-    // Verificar que el usuario sea un doctor
     if (req.user.role !== 'Doctor') {
         return res.status(403).send('Acceso denegado. Solo los doctores pueden acceder a esta ruta.');
     }
 
-    // Obtener el doctor por el userId del token
     const doctor = await Doctor.findOne({ userId: req.user.userId });
     if (!doctor) {
         return res.status(404).send('Doctor no encontrado');
     }
 
-    // Obtener citas del doctor
-    const appointments = await Appointment.find({ doctorName: doctor.name });
+    const appointments = await Appointment.find({ doctorName: doctor.userId.name });
+    if (appointments.length === 0) {
+        return res.status(404).send('No se encontraron citas');
+    }
+
     res.status(200).send(appointments);
 });
+
 
 // Obtener citas del paciente autenticado
 app.get('/api/patientAppointments', authMiddleware, async (req, res) => {

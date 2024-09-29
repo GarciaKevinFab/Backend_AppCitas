@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const doctorSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -8,4 +8,4 @@ const doctorSchema = new mongoose.Schema({
 });
 
 const Doctor = mongoose.model('Doctor', doctorSchema);
-module.exports = Doctor;
+export default Doctor;

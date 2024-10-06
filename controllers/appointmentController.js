@@ -16,6 +16,25 @@ export const getDoctorAppointments = async (req, res) => {
     res.status(200).send(appointments);
 };
 
+// Ruta para marcar una cita como atendida
+export const markAppointmentAsAttended = async (req, res) => {
+    try {
+        const appointment = await Appointment.findById(req.params.id);
+
+        if (!appointment) {
+            return res.status(404).send('Cita no encontrada');
+        }
+
+        // Marcar la cita como atendida
+        appointment.attended = true;
+        await appointment.save();
+
+        res.status(200).send('Cita marcada como atendida');
+    } catch (error) {
+        res.status(500).send('Error al marcar la cita como atendida');
+    }
+};
+
 // Obtener citas del paciente autenticado
 export const getPatientAppointments = async (req, res) => {
     if (req.user.role !== 'Paciente') {
@@ -45,7 +64,8 @@ export const createAppointment = async (req, res) => {
             patientName,
             doctorName: doctor.userId.name,
             date,
-            time
+            time,
+            attended: false, // Inicialmente no atendida
         });
 
         await appointment.save();
